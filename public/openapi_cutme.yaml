@@ -1,0 +1,896 @@
+openapi: 3.0.3
+info:
+  title: CutMe API
+  version: 1.0.0
+  description: Dokumentasi API CutMe berdasarkan routes/api.php dan controller Laravel yang diberikan.
+servers:
+- url: http://127.0.0.1:8011/api
+  description: Server Laravel lokal
+tags:
+- name: Autentikasi
+- name: Pelanggan
+- name: Booking
+- name: Pembayaran
+- name: Ulasan
+- name: Admin
+components:
+  securitySchemes:
+    sanctumBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+      description: Token Sanctum. Route /user memakai middleware auth:sanctum. Login saat ini belum mengembalikan
+        token.
+  schemas:
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+    ErrorValidation:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    RegisterRequest:
+      type: object
+      required:
+      - nama
+      - no_hp
+      - email
+      - password
+      properties:
+        nama:
+          type: string
+          maxLength: 100
+        no_hp:
+          type: string
+          maxLength: 15
+        email:
+          type: string
+          format: email
+          maxLength: 100
+        password:
+          type: string
+          format: password
+          minLength: 6
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    Layanan:
+      type: object
+      properties:
+        id_layanan:
+          type: integer
+        nama_layanan:
+          type: string
+        harga:
+          type: string
+          example: "25000.00"
+        durasi_menit:
+          type: integer
+    LayananRequest:
+      type: object
+      required:
+      - nama_layanan
+      - harga
+      - durasi_menit
+      properties:
+        nama_layanan:
+          type: string
+          maxLength: 100
+        harga:
+          type: number
+          minimum: 0
+        durasi_menit:
+          type: integer
+          minimum: 1
+    Kapster:
+      type: object
+      properties:
+        id_kapster:
+          type: integer
+        nama:
+          type: string
+        no_hp:
+          type: string
+        spesialisasi:
+          type: string
+        status_aktif:
+          type: integer
+          example: 1
+    KapsterRequest:
+      type: object
+      required:
+      - nama
+      - no_hp
+      - spesialisasi
+      - status_aktif
+      properties:
+        nama:
+          type: string
+          maxLength: 100
+        no_hp:
+          type: string
+          maxLength: 20
+        spesialisasi:
+          type: string
+          maxLength: 100
+        status_aktif:
+          type: boolean
+    JadwalKapster:
+      type: object
+      properties:
+        id_jadwal:
+          type: integer
+        id_kapster:
+          type: integer
+        tanggal:
+          type: string
+          format: date
+        jam_mulai:
+          type: string
+        jam_selesai:
+          type: string
+        status_slot:
+          type: string
+    BookingRequest:
+      type: object
+      required:
+      - id_pelanggan
+      - id_kapster
+      - id_jadwal
+      - total_biaya
+      properties:
+        id_pelanggan:
+          type: integer
+        id_kapster:
+          type: integer
+        id_jadwal:
+          type: integer
+        total_biaya:
+          type: number
+          minimum: 0
+    Booking:
+      type: object
+      properties:
+        id_booking:
+          type: integer
+        id_pelanggan:
+          type: integer
+        id_kapster:
+          type: integer
+        id_jadwal:
+          type: integer
+        tgl_booking:
+          type: string
+          format: date-time
+        status:
+          type: string
+        total_biaya:
+          type: string
+          example: "25000.00"
+    BookingStatusRequest:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - datang
+          - sedang_dilayani
+          - selesai
+    DetailBookingRequest:
+      type: object
+      required:
+      - id_booking
+      - id_layanan
+      properties:
+        id_booking:
+          type: integer
+        id_layanan:
+          type: integer
+    PembayaranRequest:
+      type: object
+      required:
+      - id_booking
+      - metode
+      - jumlah_bayar
+      properties:
+        id_booking:
+          type: integer
+        metode:
+          type: string
+          maxLength: 20
+        jumlah_bayar:
+          type: number
+          minimum: 0
+    UlasanRequest:
+      type: object
+      required:
+      - id_booking
+      - id_pelanggan
+      - rating
+      properties:
+        id_booking:
+          type: integer
+        id_pelanggan:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        komentar:
+          type: string
+          nullable: true
+paths:
+  /auth/register:
+    post:
+      tags:
+      - Autentikasi
+      summary: Registrasi pelanggan
+      responses:
+        '200':
+          description: Registrasi berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id_pelanggan:
+                    type: integer
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+  /auth/login:
+    post:
+      tags:
+      - Autentikasi
+      summary: Login pelanggan
+      responses:
+        '200':
+          description: Login berhasil; respons tidak berisi token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id_pelanggan:
+                    type: integer
+                  nama:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+        '401':
+          description: Email atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /user:
+    get:
+      tags:
+      - Pelanggan
+      summary: Mengambil data user terautentikasi
+      responses:
+        '200':
+          description: Data user
+        '401':
+          description: Tidak terautentikasi
+      security:
+      - sanctumBearer: []
+  /layanan:
+    get:
+      tags:
+      - Pelanggan
+      summary: Menampilkan daftar layanan
+      responses:
+        '200':
+          description: Daftar layanan
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Layanan'
+  /kapster:
+    get:
+      tags:
+      - Pelanggan
+      summary: Menampilkan kapster aktif
+      responses:
+        '200':
+          description: Daftar kapster aktif
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Kapster'
+  /jadwal-kapster:
+    get:
+      tags:
+      - Pelanggan
+      summary: Menampilkan jadwal kapster
+      responses:
+        '200':
+          description: Daftar jadwal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JadwalKapster'
+      parameters:
+      - name: id_kapster
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: tanggal
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Format tanggal YYYY-MM-DD
+  /booking:
+    post:
+      tags:
+      - Booking
+      summary: Membuat booking dan memesan slot jadwal
+      responses:
+        '201':
+          description: Booking berhasil
+        '200':
+          description: Jadwal tidak ditemukan (berdasarkan hasil pengujian)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '409':
+          description: Jadwal sudah tidak tersedia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+        '500':
+          description: Booking gagal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+  /booking/history/{idPelanggan}:
+    get:
+      tags:
+      - Booking
+      summary: Melihat riwayat booking pelanggan
+      responses:
+        '200':
+          description: Array riwayat booking berisi detail kapster, jadwal, layanan, dan pembayaran
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id_booking:
+                      type: integer
+                    tgl_booking:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+                    total_biaya:
+                      type: string
+                      example: "25000.00"
+                    nama_kapster:
+                      type: string
+                    spesialisasi:
+                      type: string
+                    tanggal:
+                      type: string
+                      format: date
+                    jam_mulai:
+                      type: string
+                    jam_selesai:
+                      type: string
+                    nama_layanan:
+                      type: string
+                    metode:
+                      type: string
+                      nullable: true
+                    jumlah_bayar:
+                      type: string
+                      nullable: true
+                      example: "25000.00"
+                    status_bayar:
+                      type: string
+                      nullable: true
+      parameters:
+      - name: idPelanggan
+        in: path
+        required: true
+        schema:
+          type: integer
+  /booking/kapster/{idKapster}:
+    get:
+      tags:
+      - Booking
+      summary: Melihat booking milik kapster
+      responses:
+        '200':
+          description: Array booking dengan data pelanggan dan jadwal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id_booking:
+                      type: integer
+                    id_pelanggan:
+                      type: integer
+                    nama_pelanggan:
+                      type: string
+                    no_hp:
+                      type: string
+                    id_kapster:
+                      type: integer
+                    id_jadwal:
+                      type: integer
+                    tgl_booking:
+                      type: string
+                      format: date-time
+                    status:
+                      type: string
+                    total_biaya:
+                      type: string
+                      example: "25000.00"
+                    tanggal:
+                      type: string
+                      format: date
+                    jam_mulai:
+                      type: string
+                    jam_selesai:
+                      type: string
+                    nama_layanan:
+                      type: string
+      parameters:
+      - name: idKapster
+        in: path
+        required: true
+        schema:
+          type: integer
+  /booking/status/{idBooking}:
+    put:
+      tags:
+      - Booking
+      summary: Memperbarui status booking
+      responses:
+        '200':
+          description: Status booking berhasil diperbarui
+        '404':
+          description: Booking tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingStatusRequest'
+      parameters:
+      - name: idBooking
+        in: path
+        required: true
+        schema:
+          type: integer
+  /detail-booking:
+    post:
+      tags:
+      - Booking
+      summary: Menambahkan layanan ke detail booking
+      responses:
+        '201':
+          description: Detail booking berhasil ditambahkan
+        '404':
+          description: Layanan tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetailBookingRequest'
+  /pembayaran:
+    post:
+      tags:
+      - Pembayaran
+      summary: Memproses pembayaran booking
+      responses:
+        '200':
+          description: Pembayaran berhasil; status bayar menjadi lunas dan status booking menjadi dibayar
+        '404':
+          description: Booking tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '409':
+          description: Booking sudah dibayar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+        '500':
+          description: Pembayaran gagal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PembayaranRequest'
+  /ulasan:
+    post:
+      tags:
+      - Ulasan
+      summary: Menambahkan ulasan booking
+      responses:
+        '201':
+          description: Ulasan berhasil ditambahkan
+        '409':
+          description: Booking ini sudah diberi ulasan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UlasanRequest'
+  /ulasan/{idPelanggan}:
+    get:
+      tags:
+      - Ulasan
+      summary: Melihat ulasan milik pelanggan
+      responses:
+        '200':
+          description: Objek dengan properti data berupa array ulasan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id_booking:
+                          type: integer
+                        id_pelanggan:
+                          type: integer
+                        rating:
+                          type: integer
+                        komentar:
+                          type: string
+                          nullable: true
+                        tgl_ulasan:
+                          type: string
+                          format: date-time
+      parameters:
+      - name: idPelanggan
+        in: path
+        required: true
+        schema:
+          type: integer
+  /admin/layanan:
+    get:
+      tags:
+      - Admin
+      summary: Menampilkan seluruh layanan untuk admin
+      responses:
+        '200':
+          description: Daftar layanan
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Layanan'
+    post:
+      tags:
+      - Admin
+      summary: Menambahkan layanan
+      responses:
+        '200':
+          description: Layanan berhasil ditambahkan
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LayananRequest'
+  /admin/layanan/{id}:
+    put:
+      tags:
+      - Admin
+      summary: Memperbarui layanan
+      responses:
+        '200':
+          description: Layanan berhasil diperbarui
+        '404':
+          description: Layanan tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LayananRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    delete:
+      tags:
+      - Admin
+      summary: Menghapus layanan
+      responses:
+        '200':
+          description: Layanan berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Layanan tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '409':
+          description: Layanan masih digunakan oleh data lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /admin/kapster:
+    get:
+      tags:
+      - Admin
+      summary: Menampilkan seluruh kapster untuk admin
+      responses:
+        '200':
+          description: Daftar kapster
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Kapster'
+    post:
+      tags:
+      - Admin
+      summary: Menambahkan kapster
+      responses:
+        '200':
+          description: Kapster berhasil ditambahkan
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KapsterRequest'
+  /admin/kapster/{id}:
+    put:
+      tags:
+      - Admin
+      summary: Memperbarui kapster
+      responses:
+        '200':
+          description: Kapster berhasil diperbarui
+        '404':
+          description: Kapster tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '422':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorValidation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KapsterRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    delete:
+      tags:
+      - Admin
+      summary: Menghapus kapster
+      responses:
+        '200':
+          description: Kapster berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Kapster tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '409':
+          description: Kapster masih digunakan oleh data lain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /admin/laporan:
+    get:
+      tags:
+      - Admin
+      summary: Menampilkan laporan transaksi booking
+      responses:
+        '200':
+          description: Array laporan booking, pelanggan, kapster, layanan, dan pembayaran
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id_booking:
+                      type: integer
+                    tgl_booking:
+                      type: string
+                      format: date-time
+                    nama_pelanggan:
+                      type: string
+                    nama_kapster:
+                      type: string
+                    nama_layanan:
+                      type: string
+                    total_biaya:
+                      type: string
+                      example: "25000.00"
+                    status:
+                      type: string
+                    status_bayar:
+                      type: string
+                      nullable: true
+                    tanggal:
+                      type: string
+                      format: date
+                    jam_mulai:
+                      type: string
